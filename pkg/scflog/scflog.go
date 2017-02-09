@@ -2,20 +2,18 @@ package scflog
 
 import "log"
 import "os"
-import "sync"
 
 const (
 	DEBUG = iota
-	LOG
+	INFO
 	ERROR
 	NA
 )
 
 type Logger interface {
-	Msg(format string, v ...interface{})
-	Err(format string, v ...interface{})
-	Dbg(format string, v ...interface{})
-	Level(int)
+	Info(format string, v ...interface{})
+	Error(format string, v ...interface{})
+	Debug(format string, v ...interface{})
 }
 
 type Log struct {
@@ -23,11 +21,10 @@ type Log struct {
 	info  *log.Logger
 	debug *log.Logger
 	level int
-	mutex *sync.Mutex
 }
 
 //Err writes messages to stderr
-func (log *Log) Err(format string, v ...interface{}) {
+func (log *Log) Error(format string, v ...interface{}) {
 	if log.level > ERROR {
 		return
 	}
@@ -35,28 +32,22 @@ func (log *Log) Err(format string, v ...interface{}) {
 	log.error.Printf(format, v...)
 }
 
-//Msg writes messages to stdout
-func (log *Log) Msg(format string, v ...interface{}) {
-	if log.level > DEBUG {
+//Info writes messages to stdout
+func (log *Log) Info(format string, v ...interface{}) {
+	if log.level > INFO {
 		return
 	}
 
 	log.info.Printf(format, v...)
 }
 
-//Msg writes messages to stdout
-func (log *Log) Dbg(format string, v ...interface{}) {
+//Debug writes messages to stdout
+func (log *Log) Debug(format string, v ...interface{}) {
 	if log.level > DEBUG {
 		return
 	}
 
 	log.debug.Printf(format, v...)
-}
-
-func (log *Log) Level(l int) {
-	log.mutex.Lock()
-	log.level = l
-	log.mutex.Unlock()
 }
 
 //New creates new simple logger
@@ -66,7 +57,6 @@ func New(level int) *Log {
 		info:  log.New(os.Stderr, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile),
 		debug: log.New(os.Stdout, "DEBUG: ", log.Ldate|log.Ltime|log.Lshortfile),
 		level: level,
-		mutex: &sync.Mutex{},
 	}
 
 	return log

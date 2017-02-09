@@ -1,27 +1,41 @@
 package main
 
-import "github.com/tolivb/scf/pkg/scflog"
-
-// Config container
-type Config struct {
-	zqmAggrAddr  string //where to send the aggregated data
-	sendInterval int    //send aggregated data every sendInterval seconds
-	listenAddr   string //where to receive messages proto://addr:port to listen to
-	logFS        string //field separator for the received logs
-	relayAddr    string //where to relay the received messages proto://addr:port
-	maxQueueLen  int    //max number of received but unread messages(separate queue for every filter)
-	log          *scflog.Logger
-}
+import (
+	"flag"
+	"github.com/tolivb/scf/pkg/app"
+	"github.com/tolivb/scf/pkg/config"
+	"github.com/tolivb/scf/pkg/scflog"
+)
 
 func main() {
-	l := scflog.New(scflog.DEBUG)
 
-	l.Err("%s", "alabala")
-	l.Dbg("%s", "alabala1")
-	l.Msg("%s", "alabala1")
+	cfg := config.New()
+	debug := flag.Bool("D", false, "Print DEBUG messages")
+	flag.StringVar(&cfg.ZmqAggrAddr, "zmq", "", "Zmq broker URL")
+	flag.IntVar(&cfg.SendInterval, "i", 5, "Send interval in seconds")
+	flag.StringVar(&cfg.ListenAddr, "l", "", "Listen URL for messages")
+	flag.StringVar(&cfg.StatusAddr, "s", "", "Status url")
+	flag.StringVar(&cfg.LogFS, "fs", "``", "Filed separator for incomming messages")
+	flag.StringVar(&cfg.RelayAddr, "r", "", "Relay URL(where to relay the messages)")
 
-	l.Level(scflog.ERROR)
+	flag.IntVar(
+		&cfg.MaxQueueLen,
+		"ql",
+		10000,
+		"Max number of received but unread messages(separate queue for every filter)",
+	)
 
-	l.Dbg("%s", "alabala22")
-	l.Err("%s", "alabala23", "aalall")
+	flag.Parse()
+
+	if *debug {
+		cfg.Log = scflog.New(scflog.DEBUG)
+	} else {
+		cfg.Log = scflog.New(scflog.ERROR)
+	}
+
+	cfg.AppName = "SCFilters"
+	cfg.Ver = "1.0"
+
+	app := app.New(cfg)
+	app.Run()
 }
