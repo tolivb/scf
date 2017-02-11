@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/tolivb/scf/pkg/scflog"
+	"sync"
 )
 
 //Config container
@@ -16,6 +17,7 @@ type Config struct {
 	AppName      string
 	Ver          string
 	Log          scflog.Logger
+	Wg           sync.WaitGroup
 }
 
 func New() *Config {
