@@ -2,22 +2,28 @@ package services
 
 import (
 	"fmt"
-	"github.com/tolivb/scf/pkg/config"
+
 	"net"
 	"net/url"
+
+	"github.com/tolivb/scf/pkg/config"
 )
 
+// Services interface
 type Services interface {
 	Start() error
 }
 
+// Syslog service responsible for receiving log messages
 type Syslog struct {
-	cfg  *config.Config
-	conn *net.UDPConn
-	addr string
-	net  string
+	cfg    *config.Config
+	conn   *net.UDPConn
+	status *Status
+	addr   string
+	net    string
 }
 
+// Start implements Services interface
 func (s *Syslog) Start() error {
 
 	if s.conn != nil {
@@ -27,7 +33,7 @@ func (s *Syslog) Start() error {
 	udpAddr, err := net.ResolveUDPAddr(s.net, s.addr)
 
 	if err != nil {
-		return fmt.Errorf("Syslog unable to resolve listen addr: %s", s.addr, err)
+		return fmt.Errorf("Syslog unable to resolve listen addr %s: %s", s.addr, err)
 	}
 
 	s.cfg.Log.Debug("Syslog listen addr resolved to %", udpAddr)
@@ -49,11 +55,11 @@ func (s *Syslog) Start() error {
 
 		for {
 			n, _, err := s.conn.ReadFromUDP(rcvBuff)
-
 			if err != nil {
 				s.cfg.Log.Error("Syslog read from %s failed with: %s", s.addr, err)
 			} else {
 				s.cfg.Log.Info("%d - %s ", n, rcvBuff[0:n])
+				s.status.NewEvent("syslog", EINCIN, nil)
 			}
 		}
 	}(s)
@@ -61,10 +67,10 @@ func (s *Syslog) Start() error {
 	return nil
 }
 
-func New(cfg *config.Config) (Services, error) {
+// NewLogReceiver used to create a new listen service that receives log messages(syslog)
+func NewLogReceiver(cfg *config.Config, status *Status) (Services, error) {
 	if cfg.ListenAddr == "" {
-		err := fmt.Errorf("%s", "Listen address is empty")
-		return nil, err
+		return nil, fmt.Errorf("%s", "Listen address is empty")
 	}
 
 	addr, err := url.Parse(cfg.ListenAddr)
@@ -73,14 +79,14 @@ func New(cfg *config.Config) (Services, error) {
 		return nil, err
 	}
 
-	switch addr.Scheme {
-	case "udp":
-		return &Syslog{
-			cfg:  cfg,
-			net:  addr.Scheme,
-			addr: addr.Host,
-		}, nil
+	if addr.Scheme != "udp" {
+		return nil, fmt.Errorf("Unsupported schema `%s`", addr.Scheme)
 	}
 
-	return nil, fmt.Errorf("Unsupported schema `%s`", addr.Scheme)
+	return &Syslog{
+		cfg:    cfg,
+		net:    addr.Scheme,
+		addr:   addr.Host,
+		status: status,
+	}, nil
 }

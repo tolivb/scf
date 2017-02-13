@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/tolivb/scf/pkg/scflog"
 	"sync"
+
+	"github.com/tolivb/scf/pkg/scflog"
 )
 
 //Config container
